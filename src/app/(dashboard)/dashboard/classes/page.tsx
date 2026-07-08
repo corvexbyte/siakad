@@ -1,0 +1,63 @@
+import { requireRole } from "@/server/queries/auth";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/layout/page-header";
+import { DataTable } from "@/components/tables/data-table";
+import { ClassForm } from "@/features/classes/class-form";
+import { Badge } from "@/components/ui/badge";
+
+export default async function ClassesPage() {
+  await requireRole(["super_admin", "admin_akademik", "kaprodi"]);
+  const supabase = await createClient();
+
+  const [{ data: classes }, { data: courses }, { data: lecturers }, { data: years }, { data: semesters }] =
+    await Promise.all([
+      supabase
+        .from("classes")
+        .select("*, courses(course_code, course_name), lecturers(profiles(full_name)), semesters(name)")
+        .order("class_name"),
+      supabase.from("courses").select("*").eq("is_active", true).order("course_code"),
+      supabase.from("lecturers").select("id, profiles(full_name)").order("lecturer_number"),
+      supabase.from("academic_years").select("*").order("year_label", { ascending: false }),
+      supabase.from("semesters").select("*").order("created_at", { ascending: false }),
+    ]);
+
+  const rows =
+    classes?.map((c) => ({
+      ...c,
+      course_label: `${c.courses?.course_code} — ${c.courses?.course_name}`,
+      lecturer_name: c.lecturers?.profiles?.full_name ?? "—",
+      semester_name: c.semesters?.name ?? "—",
+    })) ?? [];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Kelas" description="Kelola kelas perkuliahan">
+        <ClassForm
+          courses={courses ?? []}
+          lecturers={lecturers ?? []}
+          years={years ?? []}
+          semesters={semesters ?? []}
+        />
+      </PageHeader>
+      <DataTable
+        columns={[
+          { key: "class_name", label: "Kelas" },
+          { key: "course_label", label: "Mata Kuliah" },
+          { key: "lecturer_name", label: "Dosen" },
+          { key: "semester_name", label: "Semester" },
+          { key: "capacity", label: "Kapasitas" },
+          {
+            key: "status",
+            label: "Status",
+            render: (r) => (
+              <Badge variant={r.status === "open" ? "success" : "secondary"}>
+                {String(r.status)}
+              </Badge>
+            ),
+          },
+        ]}
+        data={rows}
+      />
+    </div>
+  );
+}
