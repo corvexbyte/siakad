@@ -22,6 +22,10 @@
 # production
 /build
 
+AGENTS.md
+CLAUDE.md
+PRD.md
+
 # misc
 .DS_Store
 *.pem
