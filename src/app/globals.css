@@ -47,6 +47,16 @@
   }
 }
 
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+}
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);

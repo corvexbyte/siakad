@@ -16,6 +16,21 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Demo Data
+
+Seeded demo accounts use password `password123`.
+
+- `admin@siakad.demo` - Super Admin
+- `akademik@siakad.demo` - Admin Akademik
+- `kaprodi@siakad.demo` - Kaprodi
+- `dosen@siakad.demo` - Dosen
+- `mahasiswa@siakad.demo` - Mahasiswa
+
+If login returns `500` from `/auth/v1/token?grant_type=password` with
+`Database error querying schema`, rerun `supabase/seed.sql` in Supabase SQL
+Editor. The seed recreates demo email identities with the shape expected by
+Supabase Auth.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

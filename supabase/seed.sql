@@ -84,6 +84,8 @@ WITH demo_users (email, full_name, role) AS (
 )
 UPDATE auth.users
 SET
+  aud = 'authenticated',
+  role = 'authenticated',
   encrypted_password = crypt('password123', gen_salt('bf')),
   email_confirmed_at = COALESCE(auth.users.email_confirmed_at, now()),
   raw_app_meta_data = jsonb_build_object(
@@ -102,6 +104,18 @@ SET
 FROM demo_users
 WHERE auth.users.email = demo_users.email;
 
+DELETE FROM auth.identities
+USING auth.users
+WHERE auth.identities.user_id = auth.users.id
+  AND auth.identities.provider = 'email'
+  AND auth.users.email IN (
+    'admin@siakad.demo',
+    'akademik@siakad.demo',
+    'kaprodi@siakad.demo',
+    'dosen@siakad.demo',
+    'mahasiswa@siakad.demo'
+  );
+
 INSERT INTO auth.identities (
   id,
   user_id,
@@ -113,10 +127,19 @@ INSERT INTO auth.identities (
   updated_at
 )
 SELECT
-  gen_random_uuid(),
   auth.users.id,
-  auth.users.email,
-  jsonb_build_object('sub', auth.users.id::text, 'email', auth.users.email),
+  auth.users.id,
+  auth.users.id::text,
+  jsonb_build_object(
+    'sub',
+    auth.users.id::text,
+    'email',
+    auth.users.email,
+    'email_verified',
+    true,
+    'phone_verified',
+    false
+  ),
   'email',
   now(),
   now(),
@@ -129,7 +152,10 @@ WHERE auth.users.email IN (
   'dosen@siakad.demo',
   'mahasiswa@siakad.demo'
 )
-ON CONFLICT DO NOTHING;
+ON CONFLICT (provider_id, provider) DO UPDATE SET
+  user_id = EXCLUDED.user_id,
+  identity_data = EXCLUDED.identity_data,
+  updated_at = now();
 
 WITH demo_users (email, full_name, role) AS (
   VALUES
