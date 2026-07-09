@@ -5,33 +5,48 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createSession, deleteSession } from "@/lib/auth/session";
 import {
-  getProfile,
   logActivity,
   requireRole,
 } from "@/server/queries/auth";
 import { DEFAULT_ROLE_REDIRECT, ROLES, type UserRole } from "@/constants/roles";
 
 export async function signIn(email: string, password: string) {
+  let user;
+  try {
+    const supabase = await createClient();
+    
+    // Instead of RPC, fetch user and compare bcrypt hash manually
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, password_hash, role, is_active")
+      .eq("email", email)
+      .maybeSingle();
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .rpc("authenticate_user", {
-      login_email: email,
-      login_password: password,
-    })
-    .maybeSingle();
+    if (error || !data || !data.password_hash) {
+      return { error: "Email atau password salah." };
+    }
+    
+    user = data;
 
-  if (error || !data) {
-    return { error: "Email atau password salah." };
+    const bcrypt = await import("bcryptjs");
+    const isValid = await bcrypt.compare(password, user.password_hash);
+
+    if (!isValid) {
+      return { error: "Email atau password salah." };
+    }
+
+    if (!user.is_active) {
+      return { error: "Akun tidak aktif. Hubungi administrator." };
+    }
+
+    await createSession(user.id);
+    await logActivity("login");
+  } catch (err) {
+    console.error("Login Server Error:", err);
+    return { error: "Terjadi kesalahan internal. Periksa konfigurasi server (env vars)." };
   }
 
-  if (!data.is_active) {
-    return { error: "Akun tidak aktif. Hubungi administrator." };
-  }
-
-  await createSession(data.id);
-  await logActivity("login");
-  redirect(DEFAULT_ROLE_REDIRECT[data.role as UserRole] ?? "/dashboard");
+  redirect(DEFAULT_ROLE_REDIRECT[user.role as UserRole] ?? "/dashboard");
 }
 
 export async function signOut() {
