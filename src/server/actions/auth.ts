@@ -9,12 +9,14 @@ import {
   requireRole,
 } from "@/server/queries/auth";
 import { DEFAULT_ROLE_REDIRECT, ROLES, type UserRole } from "@/constants/roles";
+import * as bcrypt from 'bcryptjs';
+
 
 export async function signIn(email: string, password: string) {
   let user;
   try {
     const supabase = await createClient();
-    
+
     // Instead of RPC, fetch user and compare bcrypt hash manually
     const { data, error } = await supabase
       .from("users")
@@ -25,10 +27,9 @@ export async function signIn(email: string, password: string) {
     if (error || !data || !data.password_hash) {
       return { error: "Email atau password salah." };
     }
-    
+
     user = data;
 
-    const bcrypt = await import("bcryptjs");
     const isValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isValid) {
@@ -75,11 +76,10 @@ export async function createUser(formData: FormData) {
     return { error: "Password minimal 8 karakter." };
   }
 
-  const bcrypt = await import("bcryptjs");
   const passwordHash = await bcrypt.hash(password, 10);
 
   const supabase = await createClient();
-  
+
   // Periksa apakah email sudah ada
   const { data: existing } = await supabase
     .from("users")
