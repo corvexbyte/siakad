@@ -79,6 +79,7 @@ export async function createUser(formData: FormData) {
   const { data, error } = await supabase
     .from("users")
     .insert({
+      id: crypto.randomUUID(),
       full_name,
       email,
       password_hash: passwordHash,
