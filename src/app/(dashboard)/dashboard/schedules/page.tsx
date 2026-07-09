@@ -35,9 +35,8 @@ export default async function SchedulesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Jadwal Kuliah" description="Atur jadwal dan ruangan">
-        <ScheduleForm classes={classes ?? []} rooms={rooms ?? []} />
-      </PageHeader>
+      <PageHeader title="Jadwal Kuliah" description="Atur jadwal dan ruangan" />
+      <ScheduleForm classes={classes ?? []} rooms={rooms ?? []} />
       <DataTable
         columns={[
           { key: "class_label", label: "Kelas" },

@@ -15,11 +15,11 @@ export default async function StudentsPage() {
     await Promise.all([
       supabase
         .from("students")
-        .select("*, profiles(full_name, email), study_programs(name)")
+        .select("*, users(full_name, email), study_programs(name)")
         .order("student_number"),
       supabase.from("study_programs").select("*").order("name"),
       supabase
-        .from("profiles")
+        .from("users")
         .select("*")
         .eq("role", "mahasiswa")
         .eq("is_active", true),
@@ -32,19 +32,18 @@ export default async function StudentsPage() {
   const rows =
     students?.map((s) => ({
       ...s,
-      full_name: s.profiles?.full_name ?? "—",
-      email: s.profiles?.email ?? "—",
+      full_name: s.users?.full_name ?? "—",
+      email: s.users?.email ?? "—",
       program_name: s.study_programs?.name ?? "—",
     })) ?? [];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mahasiswa" description="Kelola data mahasiswa">
-        <StudentForm
-          programs={programs ?? []}
-          profiles={unlinkedProfiles}
-        />
-      </PageHeader>
+      <PageHeader title="Mahasiswa" description="Kelola data mahasiswa" />
+      <StudentForm
+        programs={programs ?? []}
+        profiles={unlinkedProfiles}
+      />
       <DataTable
         columns={[
           { key: "student_number", label: "NIM" },

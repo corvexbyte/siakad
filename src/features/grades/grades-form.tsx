@@ -5,6 +5,7 @@ import {
   saveGrade,
   publishGrades,
   lockGrades,
+  getClassGrades,
 } from "@/server/actions/krs-grades";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/lib/supabase/client";
 
 interface ClassOption {
   id: string;
   class_name: string;
   courses: { course_code: string; course_name: string } | null;
-  lecturers?: { profiles: { full_name: string } | null } | null;
+  lecturers?: { users: { full_name: string } | null } | null;
 }
 
 interface StudentGrade {
@@ -36,7 +36,7 @@ interface StudentGrade {
   is_published: boolean;
   students: {
     student_number: string;
-    profiles: { full_name: string } | null;
+    users: { full_name: string } | null;
   } | null;
 }
 
@@ -53,56 +53,8 @@ export function GradesForm({
 
   async function loadStudents(selectedClassId: string) {
     setClassId(selectedClassId);
-    const supabase = createClient();
-
-    const { data: registrationItems } = await supabase
-      .from("course_registration_items")
-      .select("course_registrations!inner(student_id, status)")
-      .eq("class_id", selectedClassId)
-      .eq("course_registrations.status", "approved");
-
-    const studentIds =
-      registrationItems?.map(
-        (i) => i.course_registrations?.student_id,
-      ).filter(Boolean) ?? [];
-
-    if (!studentIds.length) {
-      setStudents([]);
-      return;
-    }
-
-    const { data: grades } = await supabase
-      .from("grades")
-      .select("*, students(student_number, profiles(full_name))")
-      .eq("class_id", selectedClassId)
-      .in("student_id", studentIds);
-
-    const gradeMap = new Map(grades?.map((g) => [g.student_id, g]) ?? []);
-
-    const { data: studentData } = await supabase
-      .from("students")
-      .select("id, student_number, profiles(full_name)")
-      .in("id", studentIds);
-
-    const merged: StudentGrade[] =
-      studentData?.map((s) => {
-        const existing = gradeMap.get(s.id);
-        return (
-          existing ?? {
-            id: "",
-            student_id: s.id,
-            assignment_score: null,
-            midterm_score: null,
-            final_score: null,
-            final_numeric_score: null,
-            final_letter_grade: null,
-            is_published: false,
-            students: s,
-          }
-        );
-      }) ?? [];
-
-    setStudents(merged);
+    const result = await getClassGrades(selectedClassId);
+    setStudents((result.students ?? []) as StudentGrade[]);
   }
 
   async function handleSave(
@@ -133,8 +85,8 @@ export function GradesForm({
           {classes.map((c) => (
             <SelectItem key={c.id} value={c.id}>
               {c.courses?.course_code} — {c.class_name}
-              {isAdmin && c.lecturers?.profiles?.full_name
-                ? ` (${c.lecturers.profiles.full_name})`
+              {isAdmin && c.lecturers?.users?.full_name
+                ? ` (${c.lecturers.users.full_name})`
                 : ""}
             </SelectItem>
           ))}
@@ -198,7 +150,7 @@ function GradeRow({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">
-          {student.students?.profiles?.full_name} ({student.students?.student_number})
+          {student.students?.users?.full_name} ({student.students?.student_number})
           {student.final_letter_grade && (
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               → {student.final_numeric_score} ({student.final_letter_grade})

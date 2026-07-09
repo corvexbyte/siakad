@@ -26,10 +26,8 @@ Seeded demo accounts use password `password123`.
 - `dosen@siakad.demo` - Dosen
 - `mahasiswa@siakad.demo` - Mahasiswa
 
-If login returns `500` from `/auth/v1/token?grant_type=password` with
-`Database error querying schema`, rerun `supabase/seed.sql` in Supabase SQL
-Editor. The seed recreates demo email identities with the shape expected by
-Supabase Auth.
+Authentication uses the `public.users` table, not Supabase Auth. If demo login
+fails after resetting the database, rerun `supabase/seed.sql` after migrations.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

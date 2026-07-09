@@ -10,8 +10,10 @@ import {
   Building2,
   School,
   FileText,
+  Scroll,
   Award,
   BriefcaseBusiness,
+  UserCog,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -99,6 +101,18 @@ export const MENU_ITEMS: MenuItem[] = [
     href: "/dashboard/khs",
     icon: FileText,
     roles: ["super_admin", "admin_akademik", "mahasiswa"],
+  },
+  {
+    title: "Transkrip",
+    href: "/dashboard/transcript",
+    icon: Scroll,
+    roles: ["super_admin", "admin_akademik", "mahasiswa"],
+  },
+  {
+    title: "Users",
+    href: "/dashboard/users",
+    icon: UserCog,
+    roles: ["super_admin"],
   },
   {
     title: "Pengaturan",

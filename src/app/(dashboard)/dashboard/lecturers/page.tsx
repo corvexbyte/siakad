@@ -12,11 +12,11 @@ export default async function LecturersPage() {
     await Promise.all([
       supabase
         .from("lecturers")
-        .select("*, profiles(full_name, email), study_programs(name)")
+        .select("*, users(full_name, email), study_programs(name)")
         .order("lecturer_number"),
       supabase.from("study_programs").select("*").order("name"),
       supabase
-        .from("profiles")
+        .from("users")
         .select("*")
         .eq("role", "dosen")
         .eq("is_active", true),
@@ -28,16 +28,15 @@ export default async function LecturersPage() {
   const rows =
     lecturers?.map((l) => ({
       ...l,
-      full_name: l.profiles?.full_name ?? "—",
+      full_name: l.users?.full_name ?? "—",
       program_name: l.study_programs?.name ?? "—",
       expertise: l.expertise ?? "—",
     })) ?? [];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dosen" description="Kelola data dosen">
-        <LecturerForm programs={programs ?? []} profiles={unlinked} />
-      </PageHeader>
+      <PageHeader title="Dosen" description="Kelola data dosen" />
+      <LecturerForm programs={programs ?? []} profiles={unlinked} />
       <DataTable
         columns={[
           { key: "lecturer_number", label: "NIDN" },

@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Users,
 } from "lucide-react";
+import { DashboardChart } from "@/components/dashboard/dashboard-chart";
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
@@ -25,6 +26,13 @@ export default async function DashboardPage() {
   const supabase = await createClient();
 
   const stats = await getStats(supabase, role);
+
+  const isAdminRole = ["super_admin", "admin_akademik", "kaprodi"].includes(role);
+  const chartData = isAdminRole
+    ? stats
+        .filter((s) => typeof s.value === "string" && !isNaN(Number(s.value)))
+        .map((s) => ({ label: s.label, value: Number(s.value) }))
+    : [];
 
   return (
     <div className="space-y-6">
@@ -56,6 +64,18 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {isAdminRole && chartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistik Akademik</CardTitle>
+            <CardDescription>Jumlah data utama sistem</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DashboardChart data={chartData} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

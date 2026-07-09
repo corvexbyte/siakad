@@ -35,7 +35,7 @@ export default async function KrsPage() {
         .eq("course_registration_id", registration?.id ?? ""),
       supabase
         .from("classes")
-        .select("*, courses(*), class_schedules(*, rooms(name)), lecturers(profiles(full_name))")
+        .select("*, courses(*), class_schedules(*, rooms(name)), lecturers(users(full_name))")
         .eq("semester_id", semester.id)
         .eq("status", "open"),
     ]);
@@ -58,7 +58,7 @@ export default async function KrsPage() {
   await requireRole(["super_admin", "admin_akademik"]);
   const { data: registrations } = await supabase
     .from("course_registrations")
-    .select("*, students(student_number, profiles(full_name)), semesters(name)")
+    .select("*, students(student_number, users(full_name)), semesters(name)")
     .order("created_at", { ascending: false });
 
   return (

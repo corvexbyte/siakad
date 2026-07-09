@@ -14,9 +14,8 @@ export default async function FacultiesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fakultas" description="Kelola data fakultas">
-        <FacultyForm />
-      </PageHeader>
+      <PageHeader title="Fakultas" description="Kelola data fakultas" />
+      <FacultyForm />
       <DataTable
         columns={[
           { key: "code", label: "Kode" },

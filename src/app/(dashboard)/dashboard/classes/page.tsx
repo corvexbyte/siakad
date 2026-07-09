@@ -13,10 +13,10 @@ export default async function ClassesPage() {
     await Promise.all([
       supabase
         .from("classes")
-        .select("*, courses(course_code, course_name), lecturers(profiles(full_name)), semesters(name)")
+        .select("*, courses(course_code, course_name), lecturers(users(full_name)), semesters(name)")
         .order("class_name"),
       supabase.from("courses").select("*").eq("is_active", true).order("course_code"),
-      supabase.from("lecturers").select("id, profiles(full_name)").order("lecturer_number"),
+      supabase.from("lecturers").select("id, users(full_name)").order("lecturer_number"),
       supabase.from("academic_years").select("*").order("year_label", { ascending: false }),
       supabase.from("semesters").select("*").order("created_at", { ascending: false }),
     ]);
@@ -25,20 +25,19 @@ export default async function ClassesPage() {
     classes?.map((c) => ({
       ...c,
       course_label: `${c.courses?.course_code} — ${c.courses?.course_name}`,
-      lecturer_name: c.lecturers?.profiles?.full_name ?? "—",
+      lecturer_name: c.lecturers?.users?.full_name ?? "—",
       semester_name: c.semesters?.name ?? "—",
     })) ?? [];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Kelas" description="Kelola kelas perkuliahan">
-        <ClassForm
-          courses={courses ?? []}
-          lecturers={lecturers ?? []}
-          years={years ?? []}
-          semesters={semesters ?? []}
-        />
-      </PageHeader>
+      <PageHeader title="Kelas" description="Kelola kelas perkuliahan" />
+      <ClassForm
+        courses={courses ?? []}
+        lecturers={lecturers ?? []}
+        years={years ?? []}
+        semesters={semesters ?? []}
+      />
       <DataTable
         columns={[
           { key: "class_name", label: "Kelas" },

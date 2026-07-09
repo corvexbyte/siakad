@@ -2,28 +2,23 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionPayload } from "@/lib/auth/session";
 import type { Json, Profile } from "@/types/database";
 import type { UserRole } from "@/constants/roles";
 
 export async function getSession() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  return getSessionPayload();
 }
 
 export async function getProfile(): Promise<Profile | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const session = await getSessionPayload();
+  if (!session) return null;
 
+  const supabase = await createClient();
   const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
+    .from("users")
+    .select("id, full_name, email, role, avatar_url, is_active, created_at, updated_at")
+    .eq("id", session.userId)
     .single();
 
   return data;

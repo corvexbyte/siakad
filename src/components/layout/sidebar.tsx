@@ -3,23 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { MenuItem } from "@/constants/menus";
+import { getMenuForRole } from "@/constants/menus";
+import type { UserRole } from "@/constants/roles";
 import { GraduationCap } from "lucide-react";
 
 interface SidebarProps {
-  items: MenuItem[];
+  role: UserRole;
 }
 
-export function Sidebar({ items }: SidebarProps) {
+export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
+  const items = getMenuForRole(role);
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <GraduationCap className="h-6 w-6 text-primary" />
-        <span className="text-lg font-bold text-primary">SIAKAD</span>
+    <aside className="hidden w-64 shrink-0 border-r bg-white shadow-sm md:flex md:flex-col">
+      <div className="flex h-16 items-center gap-3 border-b px-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <GraduationCap className="h-5 w-5 text-white" />
+        </div>
+        <span className="text-lg font-bold tracking-tight text-foreground">SIAKAD</span>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 overflow-y-auto space-y-0.5 p-3">
         {items.map((item) => {
           const Icon = item.icon;
           const active =
@@ -30,13 +34,13 @@ export function Sidebar({ items }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-slate-600 hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               {item.title}
             </Link>
           );

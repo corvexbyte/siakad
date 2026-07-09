@@ -40,7 +40,7 @@ interface AvailableClass {
     end_time: string;
     rooms: { name: string } | null;
   }>;
-  lecturers: { profiles: { full_name: string } | null } | null;
+  lecturers: { users: { full_name: string } | null } | null;
 }
 
 export function KrsStudentView({
@@ -168,7 +168,7 @@ export function KrsStudentView({
                       {cls.courses?.course_code} — {cls.courses?.course_name}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {cls.class_name} · {cls.courses?.credits} SKS · {cls.lecturers?.profiles?.full_name}
+                      {cls.class_name} · {cls.courses?.credits} SKS · {cls.lecturers?.users?.full_name}
                     </p>
                   </div>
                   <Button

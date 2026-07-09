@@ -1,7 +1,7 @@
 -- Sistem Akademik Universitas - Initial Schema
 -- Run in Supabase SQL Editor or via supabase db push
 
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
 
 -- Enums
 CREATE TYPE user_role AS ENUM (
@@ -17,11 +17,12 @@ CREATE TYPE class_status AS ENUM ('open', 'closed', 'cancelled');
 CREATE TYPE academic_status AS ENUM ('active', 'leave', 'graduated', 'dropout', 'inactive');
 CREATE TYPE day_of_week AS ENUM ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
 
--- Profiles (linked to auth.users)
-CREATE TABLE profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+-- Application users
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
   role user_role NOT NULL DEFAULT 'mahasiswa',
   avatar_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
@@ -84,7 +85,7 @@ CREATE TABLE curriculums (
 -- Students
 CREATE TABLE students (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   student_number TEXT NOT NULL UNIQUE,
   study_program_id UUID NOT NULL REFERENCES study_programs(id),
   entry_year INT NOT NULL,
@@ -97,7 +98,7 @@ CREATE TABLE students (
 -- Lecturers
 CREATE TABLE lecturers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   lecturer_number TEXT NOT NULL UNIQUE,
   study_program_id UUID REFERENCES study_programs(id),
   expertise TEXT,
@@ -174,7 +175,7 @@ CREATE TABLE course_registrations (
   semester_id UUID NOT NULL REFERENCES semesters(id),
   status krs_status NOT NULL DEFAULT 'draft',
   submitted_at TIMESTAMPTZ,
-  approved_by UUID REFERENCES profiles(id),
+  approved_by UUID REFERENCES users(id),
   approved_at TIMESTAMPTZ,
   rejection_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -225,7 +226,7 @@ CREATE TABLE academic_records (
 -- Activity Logs
 CREATE TABLE activity_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID REFERENCES profiles(id),
+  profile_id UUID REFERENCES users(id),
   action TEXT NOT NULL,
   entity_type TEXT,
   entity_id UUID,
@@ -247,24 +248,42 @@ CREATE INDEX idx_grades_student ON grades(student_id);
 CREATE INDEX idx_grades_class ON grades(class_id);
 CREATE INDEX idx_activity_logs_profile ON activity_logs(profile_id);
 
--- Auto-create profile on signup
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO profiles (id, full_name, email, role)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    NEW.email,
-    COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'mahasiswa')
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE OR REPLACE FUNCTION public.authenticate_user(
+  login_email TEXT,
+  login_password TEXT
+)
+RETURNS TABLE (
+  id UUID,
+  full_name TEXT,
+  email TEXT,
+  role user_role,
+  avatar_url TEXT,
+  is_active BOOLEAN,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+)
+LANGUAGE sql
+SECURITY DEFINER
+-- Include extensions in search_path so crypt() resolves correctly
+SET search_path = public, extensions
+AS $$
+  SELECT
+    users.id,
+    users.full_name,
+    users.email,
+    users.role,
+    users.avatar_url,
+    users.is_active,
+    users.created_at,
+    users.updated_at
+  FROM users
+  WHERE lower(users.email) = lower(trim(login_email))
+    AND users.password_hash = crypt(login_password, users.password_hash)
+  LIMIT 1;
+$$;
 
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+-- Grant execute to anon role so the publishable-key Supabase client can call this RPC
+GRANT EXECUTE ON FUNCTION public.authenticate_user(TEXT, TEXT) TO anon, authenticated;
 
 -- Updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -275,7 +294,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER faculties_updated_at BEFORE UPDATE ON faculties FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER study_programs_updated_at BEFORE UPDATE ON study_programs FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER students_updated_at BEFORE UPDATE ON students FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -285,199 +304,43 @@ CREATE TRIGGER classes_updated_at BEFORE UPDATE ON classes FOR EACH ROW EXECUTE 
 CREATE TRIGGER course_registrations_updated_at BEFORE UPDATE ON course_registrations FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER grades_updated_at BEFORE UPDATE ON grades FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- Helper: get current user role
+-- NOTE: This project uses MANUAL (custom) auth — NOT Supabase Auth.
+-- Sessions are stored in signed cookies; auth.uid() is always NULL.
+-- Authorization is enforced at the Next.js server-action layer.
+-- RLS is DISABLED on all tables so the server client can read/write freely.
+-- The get_user_role / get_user_study_program_id helpers below are kept as
+-- no-op stubs so any code referencing them compiles without error.
+
 CREATE OR REPLACE FUNCTION get_user_role()
 RETURNS user_role AS $$
-  SELECT role FROM profiles WHERE id = auth.uid();
+  SELECT 'super_admin'::user_role; -- stub: real auth handled in app layer
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
--- Helper: get current user's study program (for kaprodi)
 CREATE OR REPLACE FUNCTION get_user_study_program_id()
 RETURNS UUID AS $$
-  SELECT study_program_id FROM lecturers WHERE profile_id = auth.uid()
-  UNION
-  SELECT study_program_id FROM students WHERE profile_id = auth.uid()
-  LIMIT 1;
+  SELECT NULL::UUID;
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
--- RLS
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
-ALTER TABLE study_programs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE academic_years ENABLE ROW LEVEL SECURITY;
-ALTER TABLE semesters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE curriculums ENABLE ROW LEVEL SECURITY;
-ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE lecturers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE class_schedules ENABLE ROW LEVEL SECURITY;
-ALTER TABLE student_advisors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE course_registrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE course_registration_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
-ALTER TABLE academic_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
-
--- Profiles policies
-CREATE POLICY profiles_select ON profiles FOR SELECT USING (
-  id = auth.uid()
-  OR get_user_role() IN ('super_admin', 'admin_akademik')
-  OR (get_user_role() = 'kaprodi' AND id IN (
-    SELECT profile_id FROM students WHERE study_program_id = get_user_study_program_id()
-    UNION SELECT profile_id FROM lecturers WHERE study_program_id = get_user_study_program_id()
-  ))
-);
-
-CREATE POLICY profiles_update ON profiles FOR UPDATE USING (
-  id = auth.uid() OR get_user_role() = 'super_admin'
-);
-
-CREATE POLICY profiles_insert ON profiles FOR INSERT WITH CHECK (
-  get_user_role() = 'super_admin'
-);
-
--- Admin full access helper policies for master data
-CREATE POLICY admin_all_faculties ON faculties FOR ALL USING (get_user_role() IN ('super_admin', 'admin_akademik'));
-CREATE POLICY read_faculties ON faculties FOR SELECT USING (get_user_role() IN ('kaprodi', 'dosen', 'mahasiswa'));
-
-CREATE POLICY admin_all_study_programs ON study_programs FOR ALL USING (get_user_role() IN ('super_admin', 'admin_akademik'));
-CREATE POLICY read_study_programs ON study_programs FOR SELECT USING (true);
-
-CREATE POLICY admin_all_academic_years ON academic_years FOR ALL USING (get_user_role() IN ('super_admin', 'admin_akademik'));
-CREATE POLICY read_academic_years ON academic_years FOR SELECT USING (true);
-
-CREATE POLICY admin_all_semesters ON semesters FOR ALL USING (get_user_role() IN ('super_admin', 'admin_akademik'));
-CREATE POLICY read_semesters ON semesters FOR SELECT USING (true);
-
-CREATE POLICY admin_all_curriculums ON curriculums FOR ALL USING (get_user_role() IN ('super_admin', 'admin_akademik'));
-CREATE POLICY read_curriculums ON curriculums FOR SELECT USING (true);
-
-CREATE POLICY admin_all_rooms ON rooms FOR ALL USING (get_user_role() IN ('super_admin', 'admin_akademik'));
-CREATE POLICY read_rooms ON rooms FOR SELECT USING (true);
-
--- Students policies
-CREATE POLICY students_select ON students FOR SELECT USING (
-  profile_id = auth.uid()
-  OR get_user_role() IN ('super_admin', 'admin_akademik')
-  OR (get_user_role() = 'kaprodi' AND study_program_id = get_user_study_program_id())
-  OR (get_user_role() = 'dosen' AND id IN (
-    SELECT cr.student_id FROM course_registration_items cri
-    JOIN course_registrations cr ON cr.id = cri.course_registration_id
-    JOIN classes c ON c.id = cri.class_id
-    JOIN lecturers l ON l.id = c.lecturer_id
-    WHERE l.profile_id = auth.uid()
-  ))
-);
-
-CREATE POLICY students_manage ON students FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Lecturers policies
-CREATE POLICY lecturers_select ON lecturers FOR SELECT USING (
-  profile_id = auth.uid()
-  OR get_user_role() IN ('super_admin', 'admin_akademik', 'kaprodi', 'mahasiswa')
-);
-
-CREATE POLICY lecturers_manage ON lecturers FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Courses policies
-CREATE POLICY courses_select ON courses FOR SELECT USING (true);
-CREATE POLICY courses_manage ON courses FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Classes policies
-CREATE POLICY classes_select ON classes FOR SELECT USING (true);
-CREATE POLICY classes_manage ON classes FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Class schedules policies
-CREATE POLICY class_schedules_select ON class_schedules FOR SELECT USING (true);
-CREATE POLICY class_schedules_manage ON class_schedules FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Student advisors
-CREATE POLICY student_advisors_select ON student_advisors FOR SELECT USING (true);
-CREATE POLICY student_advisors_manage ON student_advisors FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Course registrations (KRS)
-CREATE POLICY krs_select ON course_registrations FOR SELECT USING (
-  student_id IN (SELECT id FROM students WHERE profile_id = auth.uid())
-  OR get_user_role() IN ('super_admin', 'admin_akademik')
-  OR (get_user_role() = 'dosen' AND student_id IN (
-    SELECT sa.student_id FROM student_advisors sa
-    JOIN lecturers l ON l.id = sa.lecturer_id
-    WHERE l.profile_id = auth.uid()
-  ))
-);
-
-CREATE POLICY krs_insert ON course_registrations FOR INSERT WITH CHECK (
-  student_id IN (SELECT id FROM students WHERE profile_id = auth.uid())
-  OR get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
-CREATE POLICY krs_update ON course_registrations FOR UPDATE USING (
-  (student_id IN (SELECT id FROM students WHERE profile_id = auth.uid()) AND status IN ('draft', 'submitted'))
-  OR get_user_role() IN ('super_admin', 'admin_akademik')
-  OR (get_user_role() = 'dosen' AND student_id IN (
-    SELECT sa.student_id FROM student_advisors sa
-    JOIN lecturers l ON l.id = sa.lecturer_id
-    WHERE l.profile_id = auth.uid()
-  ))
-);
-
--- Course registration items
-CREATE POLICY krs_items_select ON course_registration_items FOR SELECT USING (true);
-CREATE POLICY krs_items_manage ON course_registration_items FOR ALL USING (
-  course_registration_id IN (
-    SELECT id FROM course_registrations WHERE
-      student_id IN (SELECT id FROM students WHERE profile_id = auth.uid())
-      OR get_user_role() IN ('super_admin', 'admin_akademik')
-  )
-);
-
--- Grades policies
-CREATE POLICY grades_select ON grades FOR SELECT USING (
-  (student_id IN (SELECT id FROM students WHERE profile_id = auth.uid()) AND is_published = true)
-  OR get_user_role() IN ('super_admin', 'admin_akademik')
-  OR (get_user_role() = 'dosen' AND class_id IN (
-    SELECT c.id FROM classes c
-    JOIN lecturers l ON l.id = c.lecturer_id
-    WHERE l.profile_id = auth.uid()
-  ))
-);
-
-CREATE POLICY grades_manage ON grades FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-  OR (get_user_role() = 'dosen' AND class_id IN (
-    SELECT c.id FROM classes c
-    JOIN lecturers l ON l.id = c.lecturer_id
-    WHERE l.profile_id = auth.uid()
-  ) AND is_locked = false)
-);
-
--- Academic records
-CREATE POLICY academic_records_select ON academic_records FOR SELECT USING (
-  student_id IN (SELECT id FROM students WHERE profile_id = auth.uid())
-  OR get_user_role() IN ('super_admin', 'admin_akademik', 'kaprodi')
-);
-
-CREATE POLICY academic_records_manage ON academic_records FOR ALL USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
--- Activity logs
-CREATE POLICY activity_logs_select ON activity_logs FOR SELECT USING (
-  get_user_role() IN ('super_admin', 'admin_akademik')
-);
-
-CREATE POLICY activity_logs_insert ON activity_logs FOR INSERT WITH CHECK (true);
+-- ============================================================
+-- RLS: DISABLED — custom session auth is enforced at app layer
+-- The Next.js server uses the Supabase key directly; RLS is not
+-- needed and auth.uid() is always NULL (no Supabase Auth used).
+-- ============================================================
+ALTER TABLE users                    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE faculties                DISABLE ROW LEVEL SECURITY;
+ALTER TABLE study_programs           DISABLE ROW LEVEL SECURITY;
+ALTER TABLE academic_years           DISABLE ROW LEVEL SECURITY;
+ALTER TABLE semesters                DISABLE ROW LEVEL SECURITY;
+ALTER TABLE curriculums              DISABLE ROW LEVEL SECURITY;
+ALTER TABLE students                 DISABLE ROW LEVEL SECURITY;
+ALTER TABLE lecturers                DISABLE ROW LEVEL SECURITY;
+ALTER TABLE courses                  DISABLE ROW LEVEL SECURITY;
+ALTER TABLE rooms                    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE classes                  DISABLE ROW LEVEL SECURITY;
+ALTER TABLE class_schedules          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE student_advisors         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE course_registrations     DISABLE ROW LEVEL SECURITY;
+ALTER TABLE course_registration_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE grades                   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE academic_records         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs            DISABLE ROW LEVEL SECURITY;

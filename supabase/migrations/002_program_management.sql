@@ -79,12 +79,12 @@ CREATE TABLE academic_program_registrations (
   prerequisite_passed BOOLEAN NOT NULL DEFAULT false,
   rejection_reason TEXT,
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  approved_by UUID REFERENCES profiles(id),
+  approved_by UUID REFERENCES users(id),
   approved_at TIMESTAMPTZ,
   final_score NUMERIC(5,2),
   final_letter_grade TEXT,
   grade_point NUMERIC(3,2),
-  finalized_by UUID REFERENCES profiles(id),
+  finalized_by UUID REFERENCES users(id),
   finalized_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -96,7 +96,7 @@ CREATE TABLE academic_program_assignments (
   registration_id UUID NOT NULL REFERENCES academic_program_registrations(id) ON DELETE CASCADE,
   lecturer_id UUID NOT NULL REFERENCES lecturers(id),
   assignment_role academic_program_assignment_role NOT NULL,
-  assigned_by UUID REFERENCES profiles(id),
+  assigned_by UUID REFERENCES users(id),
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(registration_id, lecturer_id, assignment_role)
 );

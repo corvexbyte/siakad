@@ -13,7 +13,7 @@ interface RegistrationRow {
   status: KrsStatus;
   students: {
     student_number: string;
-    profiles: { full_name: string } | null;
+    users: { full_name: string } | null;
   } | null;
   semesters: { name: string } | null;
 }
@@ -46,7 +46,7 @@ export function KrsAdminView({
           key: "student",
           label: "Mahasiswa",
           render: (r) =>
-            `${r.students?.profiles?.full_name ?? "—"} (${r.students?.student_number ?? "—"})`,
+            `${r.students?.users?.full_name ?? "—"} (${r.students?.student_number ?? "—"})`,
         },
         {
           key: "semester",

@@ -22,7 +22,7 @@ export default async function AdvisorKrsPage() {
 
   const { data: registrations } = await supabase
     .from("course_registrations")
-    .select("*, students(student_number, profiles(full_name)), semesters(name)")
+    .select("*, students(student_number, users(full_name)), semesters(name)")
     .in("student_id", studentIds.length ? studentIds : ["00000000-0000-0000-0000-000000000000"])
     .eq("status", "submitted")
     .order("submitted_at", { ascending: false });

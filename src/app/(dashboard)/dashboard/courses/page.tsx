@@ -25,9 +25,8 @@ export default async function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mata Kuliah" description="Kelola mata kuliah">
-        <CourseForm programs={programs ?? []} />
-      </PageHeader>
+      <PageHeader title="Mata Kuliah" description="Kelola mata kuliah" />
+      <CourseForm programs={programs ?? []} />
       <DataTable
         columns={[
           { key: "course_code", label: "Kode" },

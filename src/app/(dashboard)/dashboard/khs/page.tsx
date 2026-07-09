@@ -24,7 +24,7 @@ type GradeRow = {
   } | null;
   students: {
     student_number: string;
-    profiles: { full_name: string } | null;
+    users: { full_name: string } | null;
   } | null;
 };
 
@@ -47,7 +47,7 @@ type ProgramResultRow = {
   } | null;
   students: {
     student_number: string;
-    profiles: { full_name: string } | null;
+    users: { full_name: string } | null;
   } | null;
 };
 
@@ -60,7 +60,7 @@ export default async function KhsPage() {
   let gradesQuery = supabase
     .from("grades")
     .select(
-      "*, classes(class_name, courses(course_code, course_name, credits), semesters(name), academic_years(year_label)), students(student_number, profiles(full_name))",
+      "*, classes(class_name, courses(course_code, course_name, credits), semesters(name), academic_years(year_label)), students(student_number, users(full_name))",
     )
     .eq("is_published", true)
     .order("created_at", { ascending: false });
@@ -68,7 +68,7 @@ export default async function KhsPage() {
   let programsQuery = supabase
     .from("academic_program_registrations")
     .select(
-      "*, academic_program_periods(program_type, name, courses(course_code, course_name, credits), semesters(name), academic_years(year_label)), students(student_number, profiles(full_name))",
+      "*, academic_program_periods(program_type, name, courses(course_code, course_name, credits), semesters(name), academic_years(year_label)), students(student_number, users(full_name))",
     )
     .eq("status", "completed")
     .order("finalized_at", { ascending: false });
@@ -104,7 +104,7 @@ export default async function KhsPage() {
               title={`${grade.classes?.courses?.course_code ?? "-"} · ${
                 grade.classes?.courses?.course_name ?? "-"
               }`}
-              subtitle={`${grade.students?.profiles?.full_name ?? ""} · ${
+              subtitle={`${grade.students?.users?.full_name ?? ""} · ${
                 grade.classes?.academic_years?.year_label ?? "-"
               } · ${grade.classes?.semesters?.name ?? "-"}`}
               credits={grade.classes?.courses?.credits}
@@ -127,7 +127,7 @@ export default async function KhsPage() {
               title={`${PROGRAM_TYPE_LABELS[
                 program.academic_program_periods?.program_type as AcademicProgramType
               ]} · ${program.proposal_title}`}
-              subtitle={`${program.students?.profiles?.full_name ?? ""} · ${
+              subtitle={`${program.students?.users?.full_name ?? ""} · ${
                 program.academic_program_periods?.academic_years?.year_label ??
                 "-"
               } · ${program.academic_program_periods?.semesters?.name ?? "-"}`}

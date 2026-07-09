@@ -45,11 +45,12 @@ export type AcademicProgramLogbookStatus =
 export interface Database {
   public: {
     Tables: {
-      profiles: {
+      users: {
         Row: {
           id: string;
           full_name: string;
           email: string;
+          password_hash: string;
           role: UserRole;
           avatar_url: string | null;
           is_active: boolean;
@@ -60,13 +61,14 @@ export interface Database {
           id: string;
           full_name: string;
           email: string;
+          password_hash: string;
           role?: UserRole;
           avatar_url?: string | null;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
         Relationships: [];
       };
       faculties: {
@@ -228,7 +230,7 @@ export interface Database {
             foreignKeyName: "students_profile_id_fkey";
             columns: ["profile_id"];
             isOneToOne: true;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
@@ -265,7 +267,7 @@ export interface Database {
             foreignKeyName: "lecturers_profile_id_fkey";
             columns: ["profile_id"];
             isOneToOne: true;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
@@ -524,7 +526,7 @@ export interface Database {
             foreignKeyName: "course_registrations_approved_by_fkey";
             columns: ["approved_by"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
@@ -700,7 +702,7 @@ export interface Database {
             foreignKeyName: "activity_logs_profile_id_fkey";
             columns: ["profile_id"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];
@@ -837,14 +839,14 @@ export interface Database {
             foreignKeyName: "academic_program_registrations_approved_by_fkey";
             columns: ["approved_by"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
             foreignKeyName: "academic_program_registrations_finalized_by_fkey";
             columns: ["finalized_by"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
@@ -888,7 +890,7 @@ export interface Database {
             foreignKeyName: "academic_program_assignments_assigned_by_fkey";
             columns: ["assigned_by"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
@@ -1056,6 +1058,38 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
+      authenticate_user: {
+        Args: {
+          login_email: string;
+          login_password: string;
+        };
+        Returns: Array<{
+          id: string;
+          full_name: string;
+          email: string;
+          role: UserRole;
+          avatar_url: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        }>;
+      };
+      create_user: {
+        Args: {
+          p_full_name: string;
+          p_email: string;
+          p_password: string;
+          p_role: UserRole;
+        };
+        Returns: Array<{
+          id: string;
+          full_name: string;
+          email: string;
+          role: UserRole;
+          is_active: boolean;
+          created_at: string;
+        }>;
+      };
       get_user_role: {
         Args: Record<PropertyKey, never>;
         Returns: UserRole;
@@ -1068,7 +1102,10 @@ export interface Database {
   };
 }
 
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Profile = Omit<
+  Database["public"]["Tables"]["users"]["Row"],
+  "password_hash"
+>;
 export type Faculty = Database["public"]["Tables"]["faculties"]["Row"];
 export type StudyProgram =
   Database["public"]["Tables"]["study_programs"]["Row"];

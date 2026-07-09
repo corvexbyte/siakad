@@ -73,7 +73,7 @@ type PeriodRow = AcademicProgramPeriod & {
 type LecturerOption = {
   id: string;
   lecturer_number: string;
-  profiles: { full_name: string } | null;
+  users: { full_name: string } | null;
   study_programs?: { name: string } | null;
 };
 
@@ -98,7 +98,7 @@ type RegistrationRow = AcademicProgramRegistration & {
   academic_program_periods: PeriodRow | null;
   students: {
     student_number: string;
-    profiles: { full_name: string } | null;
+    users: { full_name: string } | null;
     study_programs: { name: string } | null;
   } | null;
   academic_program_assignments: AssignmentRow[];
@@ -182,7 +182,7 @@ export default async function ProgramsPage() {
       ? await supabase
           .from("academic_program_registrations")
           .select(
-            "*, academic_program_periods(*, academic_years(year_label), semesters(name), study_programs(name), courses(course_code, course_name)), academic_program_assignments(*, lecturers(id, lecturer_number, profiles(full_name))), academic_program_logbooks(*), academic_program_assessments(*)",
+            "*, academic_program_periods(*, academic_years(year_label), semesters(name), study_programs(name), courses(course_code, course_name)), academic_program_assignments(*, lecturers(id, lecturer_number, users(full_name))), academic_program_logbooks(*), academic_program_assessments(*)",
           )
           .eq("student_id", student.id)
           .order("submitted_at", { ascending: false })
@@ -207,7 +207,7 @@ export default async function ProgramsPage() {
       ? await supabase
           .from("academic_program_assignments")
           .select(
-            "*, academic_program_registrations(*, academic_program_periods(*, academic_years(year_label), semesters(name), study_programs(name), courses(course_code, course_name)), students(student_number, profiles(full_name), study_programs(name)), academic_program_logbooks(*), academic_program_assessments(*))",
+            "*, academic_program_registrations(*, academic_program_periods(*, academic_years(year_label), semesters(name), study_programs(name), courses(course_code, course_name)), students(student_number, users(full_name), study_programs(name)), academic_program_logbooks(*), academic_program_assessments(*))",
           )
           .eq("lecturer_id", lecturer.id)
           .order("assigned_at", { ascending: false })
@@ -245,12 +245,12 @@ export default async function ProgramsPage() {
     supabase
       .from("academic_program_registrations")
       .select(
-        "*, academic_program_periods(*, academic_years(year_label), semesters(name), study_programs(name), courses(course_code, course_name)), students(student_number, profiles(full_name), study_programs(name)), academic_program_assignments(*, lecturers(id, lecturer_number, profiles(full_name), study_programs(name))), academic_program_logbooks(*), academic_program_assessments(*)",
+        "*, academic_program_periods(*, academic_years(year_label), semesters(name), study_programs(name), courses(course_code, course_name)), students(student_number, users(full_name), study_programs(name)), academic_program_assignments(*, lecturers(id, lecturer_number, users(full_name), study_programs(name))), academic_program_logbooks(*), academic_program_assessments(*)",
       )
       .order("submitted_at", { ascending: false }),
     supabase
       .from("lecturers")
-      .select("id, lecturer_number, profiles(full_name), study_programs(name)")
+      .select("id, lecturer_number, users(full_name), study_programs(name)")
       .order("lecturer_number"),
     supabase
       .from("academic_years")
@@ -376,7 +376,7 @@ function LecturerProgramsView({
           <Card key={assignment.id}>
             <CardHeader>
               <CardTitle className="text-base">
-                {registration.students?.profiles?.full_name} ·{" "}
+                {registration.students?.users?.full_name} ·{" "}
                 {PROGRAM_TYPE_LABELS[
                   registration.academic_program_periods
                     ?.program_type as AcademicProgramType
@@ -579,7 +579,7 @@ function RegistrationAdminList({
         <Card key={registration.id}>
           <CardHeader>
             <CardTitle className="text-base">
-              {registration.students?.profiles?.full_name} ·{" "}
+              {registration.students?.users?.full_name} ·{" "}
               {registration.proposal_title}
             </CardTitle>
           </CardHeader>
@@ -774,7 +774,7 @@ function AssignLecturerForm({
         <select name="lecturer_id" className={selectClass()} required>
           {lecturers.map((lecturer) => (
             <option key={lecturer.id} value={lecturer.id}>
-              {lecturer.profiles?.full_name} · {lecturer.lecturer_number}
+              {lecturer.users?.full_name} · {lecturer.lecturer_number}
             </option>
           ))}
         </select>
@@ -797,7 +797,7 @@ function AssignmentList({ assignments }: { assignments: AssignmentRow[] }) {
       {assignments.map((assignment) => (
         <Badge key={assignment.id} variant="secondary">
           {ASSIGNMENT_ROLE_LABELS[assignment.assignment_role]} ·{" "}
-          {assignment.lecturers?.profiles?.full_name}
+          {assignment.lecturers?.users?.full_name}
         </Badge>
       ))}
     </div>

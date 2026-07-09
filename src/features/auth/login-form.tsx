@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
-import { DEFAULT_ROLE_REDIRECT } from "@/constants/roles";
-import type { UserRole } from "@/constants/roles";
+import { signIn } from "@/server/actions/auth";
 
 const DEMO_PASSWORD = "password123";
 
@@ -57,7 +54,6 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   function selectDemoAccount(selectedEmail: string) {
     setEmail(selectedEmail);
@@ -65,52 +61,14 @@ export function LoginForm() {
     setError(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(getLoginErrorMessage(authError));
-        return;
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setError("Login gagal. Periksa email dan password.");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, is_active")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile) {
-        await supabase.auth.signOut();
-        setError("Profil pengguna tidak ditemukan. Hubungi administrator.");
-        return;
-      }
-
-      if (!profile.is_active) {
-        await supabase.auth.signOut();
-        setError("Akun tidak aktif. Hubungi administrator.");
-        return;
-      }
-
-      router.push(DEFAULT_ROLE_REDIRECT[profile.role as UserRole]);
-      router.refresh();
+      const result = await signIn(email.trim(), password);
+      if (result?.error) setError(getLoginErrorMessage(result.error));
     } catch {
       setError("Login gagal. Periksa koneksi dan coba lagi.");
     } finally {
@@ -151,6 +109,7 @@ export function LoginForm() {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="nama@universitas.ac.id"
               value={email}
@@ -162,6 +121,7 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

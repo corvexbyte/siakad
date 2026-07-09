@@ -1,8 +1,17 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_SESSION_COOKIE } from "@/lib/auth/constants";
 
-export async function proxy(request: NextRequest) {
-  return updateSession(request);
+export function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const hasSession = Boolean(request.cookies.get(AUTH_SESSION_COOKIE)?.value);
+
+  if (!hasSession && pathname.startsWith("/dashboard")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

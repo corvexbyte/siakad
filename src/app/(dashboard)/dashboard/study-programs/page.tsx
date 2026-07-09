@@ -20,9 +20,8 @@ export default async function StudyProgramsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Program Studi" description="Kelola program studi">
-        <StudyProgramForm faculties={faculties ?? []} />
-      </PageHeader>
+      <PageHeader title="Program Studi" description="Kelola program studi" />
+      <StudyProgramForm faculties={faculties ?? []} />
       <DataTable
         columns={[
           { key: "code", label: "Kode" },

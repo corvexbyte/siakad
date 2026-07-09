@@ -31,7 +31,7 @@ export default async function GradesPage() {
   const supabase = await createClient();
   const { data: classes } = await supabase
     .from("classes")
-    .select("*, courses(course_code, course_name), lecturers(profiles(full_name))")
+    .select("*, courses(course_code, course_name), lecturers(users(full_name))")
     .order("class_name");
 
   return (

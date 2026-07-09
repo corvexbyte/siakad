@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   getProfile,
+  getLecturerByProfile,
   getStudentByProfile,
   logActivity,
   requireRole,
@@ -63,6 +64,9 @@ export async function addKrsItem(registrationId: string, classId: string) {
     .single();
 
   if (!registration || registration.status !== "draft") {
+    return { error: "KRS tidak dapat diubah" };
+  }
+  if (registration.student_id !== student.id) {
     return { error: "KRS tidak dapat diubah" };
   }
 
@@ -141,7 +145,19 @@ export async function addKrsItem(registrationId: string, classId: string) {
 
 export async function removeKrsItem(itemId: string) {
   await requireRole(["mahasiswa"]);
+  const profile = await getProfile();
+  const student = profile ? await getStudentByProfile(profile.id) : null;
+  if (!student) return { error: "Data mahasiswa tidak ditemukan" };
   const supabase = await createClient();
+  const { data: item } = await supabase
+    .from("course_registration_items")
+    .select("course_registrations(student_id)")
+    .eq("id", itemId)
+    .single();
+  if (item?.course_registrations?.student_id !== student.id) {
+    return { error: "KRS tidak dapat diubah" };
+  }
+
   const { error } = await supabase
     .from("course_registration_items")
     .delete()
@@ -153,11 +169,15 @@ export async function removeKrsItem(itemId: string) {
 
 export async function submitKrs(registrationId: string) {
   await requireRole(["mahasiswa"]);
+  const profile = await getProfile();
+  const student = profile ? await getStudentByProfile(profile.id) : null;
+  if (!student) return { error: "Data mahasiswa tidak ditemukan" };
   const supabase = await createClient();
   const { error } = await supabase
     .from("course_registrations")
     .update({ status: "submitted", submitted_at: new Date().toISOString() })
     .eq("id", registrationId)
+    .eq("student_id", student.id)
     .eq("status", "draft");
   if (error) return { error: error.message };
   await logActivity("submit_krs", "course_registrations", registrationId);
@@ -166,9 +186,24 @@ export async function submitKrs(registrationId: string) {
 }
 
 export async function approveKrs(registrationId: string) {
-  await requireRole(["super_admin", "admin_akademik", "dosen"]);
-  const profile = await getProfile();
+  const profile = await requireRole(["super_admin", "admin_akademik", "dosen"]);
   const supabase = await createClient();
+  if (profile?.role === "dosen") {
+    const lecturer = await getLecturerByProfile(profile.id);
+    const { data: registration } = await supabase
+      .from("course_registrations")
+      .select("student_id")
+      .eq("id", registrationId)
+      .single();
+    const { data: advisor } = await supabase
+      .from("student_advisors")
+      .select("id")
+      .eq("student_id", registration?.student_id ?? "")
+      .eq("lecturer_id", lecturer?.id ?? "")
+      .maybeSingle();
+    if (!advisor) return { error: "Anda bukan dosen wali mahasiswa ini" };
+  }
+
   const { error } = await supabase
     .from("course_registrations")
     .update({
@@ -186,8 +221,24 @@ export async function approveKrs(registrationId: string) {
 }
 
 export async function rejectKrs(registrationId: string, reason: string) {
-  await requireRole(["super_admin", "admin_akademik", "dosen"]);
+  const profile = await requireRole(["super_admin", "admin_akademik", "dosen"]);
   const supabase = await createClient();
+  if (profile.role === "dosen") {
+    const lecturer = await getLecturerByProfile(profile.id);
+    const { data: registration } = await supabase
+      .from("course_registrations")
+      .select("student_id")
+      .eq("id", registrationId)
+      .single();
+    const { data: advisor } = await supabase
+      .from("student_advisors")
+      .select("id")
+      .eq("student_id", registration?.student_id ?? "")
+      .eq("lecturer_id", lecturer?.id ?? "")
+      .maybeSingle();
+    if (!advisor) return { error: "Anda bukan dosen wali mahasiswa ini" };
+  }
+
   const { error } = await supabase
     .from("course_registrations")
     .update({
@@ -209,8 +260,20 @@ export async function saveGrade(
   midterm: number | null,
   final: number | null,
 ) {
-  await requireRole(["super_admin", "admin_akademik", "dosen"]);
+  const profile = await requireRole(["super_admin", "admin_akademik", "dosen"]);
   const supabase = await createClient();
+  if (profile.role === "dosen") {
+    const lecturer = await getLecturerByProfile(profile.id);
+    const { data: targetClass } = await supabase
+      .from("classes")
+      .select("lecturer_id")
+      .eq("id", classId)
+      .single();
+    if (!lecturer || targetClass?.lecturer_id !== lecturer.id) {
+      return { error: "Anda tidak berhak menginput nilai kelas ini" };
+    }
+  }
+
   const calculated = calculateGrade(assignment, midterm, final);
 
   const { error } = await supabase.from("grades").upsert(
@@ -233,8 +296,20 @@ export async function saveGrade(
 }
 
 export async function publishGrades(classId: string) {
-  await requireRole(["super_admin", "admin_akademik", "dosen"]);
+  const profile = await requireRole(["super_admin", "admin_akademik", "dosen"]);
   const supabase = await createClient();
+  if (profile.role === "dosen") {
+    const lecturer = await getLecturerByProfile(profile.id);
+    const { data: targetClass } = await supabase
+      .from("classes")
+      .select("lecturer_id")
+      .eq("id", classId)
+      .single();
+    if (!lecturer || targetClass?.lecturer_id !== lecturer.id) {
+      return { error: "Anda tidak berhak mempublikasikan nilai kelas ini" };
+    }
+  }
+
   const { error } = await supabase
     .from("grades")
     .update({ is_published: true })
@@ -242,6 +317,69 @@ export async function publishGrades(classId: string) {
   if (error) return { error: error.message };
   revalidatePath("/dashboard/grades");
   return { success: true };
+}
+
+export async function getClassGrades(classId: string) {
+  const profile = await requireRole(["super_admin", "admin_akademik", "dosen"]);
+  const supabase = await createClient();
+
+  if (profile.role === "dosen") {
+    const lecturer = await getLecturerByProfile(profile.id);
+    const { data: targetClass } = await supabase
+      .from("classes")
+      .select("lecturer_id")
+      .eq("id", classId)
+      .single();
+    if (!lecturer || targetClass?.lecturer_id !== lecturer.id) {
+      return { error: "Anda tidak berhak melihat kelas ini", students: [] };
+    }
+  }
+
+  const { data: registrationItems } = await supabase
+    .from("course_registration_items")
+    .select("course_registrations!inner(student_id, status)")
+    .eq("class_id", classId)
+    .eq("course_registrations.status", "approved");
+
+  const studentIds =
+    registrationItems
+      ?.map((item) => item.course_registrations?.student_id)
+      .filter(Boolean) ?? [];
+
+  if (!studentIds.length) return { students: [] };
+
+  const [{ data: grades }, { data: studentData }] = await Promise.all([
+    supabase
+      .from("grades")
+      .select("*, students(student_number, users(full_name))")
+      .eq("class_id", classId)
+      .in("student_id", studentIds),
+    supabase
+      .from("students")
+      .select("id, student_number, users(full_name)")
+      .in("id", studentIds),
+  ]);
+
+  const gradeMap = new Map(grades?.map((grade) => [grade.student_id, grade]));
+  const students =
+    studentData?.map((student) => {
+      const existing = gradeMap.get(student.id);
+      return (
+        existing ?? {
+          id: "",
+          student_id: student.id,
+          assignment_score: null,
+          midterm_score: null,
+          final_score: null,
+          final_numeric_score: null,
+          final_letter_grade: null,
+          is_published: false,
+          students: student,
+        }
+      );
+    }) ?? [];
+
+  return { students };
 }
 
 export async function lockGrades(classId: string) {

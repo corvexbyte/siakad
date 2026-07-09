@@ -21,7 +21,7 @@ type Semester = Database["public"]["Tables"]["semesters"]["Row"];
 
 interface LecturerOption {
   id: string;
-  profiles: { full_name: string } | null;
+  users: { full_name: string } | null;
 }
 
 export function ClassForm({
@@ -90,7 +90,7 @@ export function ClassForm({
               <SelectTrigger><SelectValue placeholder="Pilih dosen" /></SelectTrigger>
               <SelectContent>
                 {lecturers.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.profiles?.full_name}</SelectItem>
+                  <SelectItem key={l.id} value={l.id}>{l.users?.full_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
