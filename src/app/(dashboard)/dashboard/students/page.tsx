@@ -1,11 +1,7 @@
 import { requireRole } from "@/server/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
-import { DataTable } from "@/components/tables/data-table";
-import { StudentForm } from "@/features/students/student-form";
-import { Badge } from "@/components/ui/badge";
-import { ACADEMIC_STATUS_LABELS } from "@/types/academic";
-import type { AcademicStatus } from "@/types/academic";
+import { StudentManager } from "@/features/students/student-manager";
 
 export default async function StudentsPage() {
   await requireRole(["super_admin", "admin_akademik", "kaprodi"]);
@@ -40,27 +36,10 @@ export default async function StudentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Mahasiswa" description="Kelola data mahasiswa" />
-      <StudentForm
+      <StudentManager
+        students={rows}
         programs={programs ?? []}
         profiles={unlinkedProfiles}
-      />
-      <DataTable
-        columns={[
-          { key: "student_number", label: "NIM" },
-          { key: "full_name", label: "Nama" },
-          { key: "program_name", label: "Prodi" },
-          { key: "entry_year", label: "Angkatan" },
-          {
-            key: "academic_status",
-            label: "Status",
-            render: (r) => (
-              <Badge variant="outline">
-                {ACADEMIC_STATUS_LABELS[r.academic_status as AcademicStatus]}
-              </Badge>
-            ),
-          },
-        ]}
-        data={rows}
       />
     </div>
   );

@@ -1,9 +1,7 @@
 import { requireRole } from "@/server/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
-import { DataTable } from "@/components/tables/data-table";
-import { ClassForm } from "@/features/classes/class-form";
-import { Badge } from "@/components/ui/badge";
+import { ClassManager } from "@/features/classes/class-manager";
 
 export default async function ClassesPage() {
   await requireRole(["super_admin", "admin_akademik", "kaprodi"]);
@@ -32,30 +30,12 @@ export default async function ClassesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Kelas" description="Kelola kelas perkuliahan" />
-      <ClassForm
+      <ClassManager
+        classes={rows}
         courses={courses ?? []}
         lecturers={lecturers ?? []}
         years={years ?? []}
         semesters={semesters ?? []}
-      />
-      <DataTable
-        columns={[
-          { key: "class_name", label: "Kelas" },
-          { key: "course_label", label: "Mata Kuliah" },
-          { key: "lecturer_name", label: "Dosen" },
-          { key: "semester_name", label: "Semester" },
-          { key: "capacity", label: "Kapasitas" },
-          {
-            key: "status",
-            label: "Status",
-            render: (r) => (
-              <Badge variant={r.status === "open" ? "success" : "secondary"}>
-                {String(r.status)}
-              </Badge>
-            ),
-          },
-        ]}
-        data={rows}
       />
     </div>
   );

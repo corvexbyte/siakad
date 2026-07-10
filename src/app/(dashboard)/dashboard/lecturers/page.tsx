@@ -1,11 +1,10 @@
 import { requireRole } from "@/server/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
-import { DataTable } from "@/components/tables/data-table";
-import { LecturerForm } from "@/features/lecturers/lecturer-form";
+import { LecturerManager } from "@/features/lecturers/lecturer-manager";
 
 export default async function LecturersPage() {
-  await requireRole(["super_admin", "admin_akademik", "kaprodi"]);
+  const profile = await requireRole(["super_admin", "admin_akademik", "kaprodi"]);
   const supabase = await createClient();
 
   const [{ data: lecturers }, { data: programs }, { data: profiles }] =
@@ -36,15 +35,11 @@ export default async function LecturersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Dosen" description="Kelola data dosen" />
-      <LecturerForm programs={programs ?? []} profiles={unlinked} />
-      <DataTable
-        columns={[
-          { key: "lecturer_number", label: "NIDN" },
-          { key: "full_name", label: "Nama" },
-          { key: "program_name", label: "Prodi" },
-          { key: "expertise", label: "Keahlian" },
-        ]}
-        data={rows}
+      <LecturerManager
+        lecturers={rows}
+        programs={programs ?? []}
+        profiles={unlinked}
+        canDelete={profile.role === "super_admin"}
       />
     </div>
   );

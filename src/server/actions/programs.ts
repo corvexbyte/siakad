@@ -21,8 +21,18 @@ import type {
   AcademicProgramType,
 } from "@/types/database";
 
-const PROGRAMS_PATH = "/dashboard/programs";
+const PROGRAM_PATHS: Record<AcademicProgramType, string> = {
+  kkn: "/dashboard/kkn",
+  ta: "/dashboard/ta",
+  kp: "/dashboard/kp",
+};
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+function revalidateProgramPaths() {
+  for (const path of Object.values(PROGRAM_PATHS)) {
+    revalidatePath(path);
+  }
+}
 
 async function requireProgramManager() {
   return requireRole(["super_admin", "admin_akademik", "kaprodi"]);
@@ -121,7 +131,7 @@ export async function createProgramPeriod(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("create_academic_program_period");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -217,7 +227,7 @@ export async function submitProgramRegistration(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("submit_academic_program_registration");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -251,7 +261,7 @@ export async function updateProgramRegistrationStatus(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("update_academic_program_registration_status");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -304,7 +314,7 @@ export async function assignProgramLecturer(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("assign_academic_program_lecturer");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -337,7 +347,7 @@ export async function createProgramLogbook(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("create_academic_program_logbook");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -360,7 +370,7 @@ export async function reviewProgramLogbook(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("review_academic_program_logbook");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -380,7 +390,7 @@ export async function createProgramRubric(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("create_academic_program_rubric");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -431,7 +441,7 @@ export async function saveProgramAssessment(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("save_academic_program_assessment");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   return { success: true };
 }
 
@@ -488,7 +498,7 @@ export async function finalizeProgramGrade(formData: FormData) {
 
   if (error) return { error: error.message };
   await logActivity("finalize_academic_program_grade");
-  revalidatePath(PROGRAMS_PATH);
+  revalidateProgramPaths();
   revalidatePath("/dashboard/khs");
   return { success: true };
 }

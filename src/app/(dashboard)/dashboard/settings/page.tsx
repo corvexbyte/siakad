@@ -1,9 +1,12 @@
 import { requireRole } from "@/server/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
-import { DataTable } from "@/components/tables/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SettingsForms } from "@/features/master/settings-forms";
+import {
+  AcademicYearManager,
+  RoomManager,
+  SemesterManager,
+} from "@/features/master/settings-managers";
 
 export default async function SettingsPage() {
   await requireRole(["super_admin", "admin_akademik"]);
@@ -35,46 +38,13 @@ export default async function SettingsPage() {
           <TabsTrigger value="rooms">Ruangan</TabsTrigger>
         </TabsList>
         <TabsContent value="years" className="space-y-4">
-          <SettingsForms type="year" years={years ?? []} />
-          <DataTable
-            columns={[
-              { key: "year_label", label: "Tahun" },
-              {
-                key: "is_active",
-                label: "Status",
-                render: (r) => (r.is_active ? "Aktif" : "—"),
-              },
-            ]}
-            data={years ?? []}
-          />
+          <AcademicYearManager years={years ?? []} />
         </TabsContent>
         <TabsContent value="semesters" className="space-y-4">
-          <SettingsForms type="semester" years={years ?? []} />
-          <DataTable
-            columns={[
-              { key: "name", label: "Semester" },
-              { key: "year_label", label: "Tahun Akademik" },
-              { key: "semester_number", label: "No." },
-              {
-                key: "is_active",
-                label: "Status",
-                render: (r) => (r.is_active ? "Aktif" : "—"),
-              },
-            ]}
-            data={semesterRows}
-          />
+          <SemesterManager semesters={semesterRows} years={years ?? []} />
         </TabsContent>
         <TabsContent value="rooms" className="space-y-4">
-          <SettingsForms type="room" />
-          <DataTable
-            columns={[
-              { key: "code", label: "Kode" },
-              { key: "name", label: "Nama" },
-              { key: "building", label: "Gedung" },
-              { key: "capacity", label: "Kapasitas" },
-            ]}
-            data={rooms ?? []}
-          />
+          <RoomManager rooms={rooms ?? []} />
         </TabsContent>
       </Tabs>
     </div>

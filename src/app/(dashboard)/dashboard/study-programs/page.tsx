@@ -1,8 +1,7 @@
 import { requireRole } from "@/server/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
-import { DataTable } from "@/components/tables/data-table";
-import { StudyProgramForm } from "@/features/master/study-program-form";
+import { StudyProgramManager } from "@/features/master/study-program-manager";
 
 export default async function StudyProgramsPage() {
   await requireRole(["super_admin", "admin_akademik"]);
@@ -21,16 +20,7 @@ export default async function StudyProgramsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Program Studi" description="Kelola program studi" />
-      <StudyProgramForm faculties={faculties ?? []} />
-      <DataTable
-        columns={[
-          { key: "code", label: "Kode" },
-          { key: "name", label: "Nama Prodi" },
-          { key: "faculty_name", label: "Fakultas" },
-          { key: "degree_level", label: "Jenjang" },
-        ]}
-        data={rows}
-      />
+      <StudyProgramManager programs={rows} faculties={faculties ?? []} />
     </div>
   );
 }

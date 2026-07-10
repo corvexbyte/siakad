@@ -9,6 +9,7 @@ import {
 } from "@/server/actions/krs-grades";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -17,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatusStepper } from "@/components/status-stepper";
 
 interface ClassOption {
   id: string;
@@ -34,11 +36,14 @@ interface StudentGrade {
   final_numeric_score: number | null;
   final_letter_grade: string | null;
   is_published: boolean;
+  is_locked: boolean;
   students: {
     student_number: string;
     users: { full_name: string } | null;
   } | null;
 }
+
+const GRADE_STEPS = ["Draft", "Dipublikasi", "Terkunci"];
 
 export function GradesForm({
   classes,
@@ -50,10 +55,22 @@ export function GradesForm({
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState<StudentGrade[]>([]);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const isPublished = students.some((s) => s.is_published);
+  const isLocked = students.some((s) => s.is_locked);
+  const stepIndex = isLocked ? 2 : isPublished ? 1 : 0;
 
   async function loadStudents(selectedClassId: string) {
     setClassId(selectedClassId);
+    setError(null);
+    setNotice(null);
     const result = await getClassGrades(selectedClassId);
+    if ("error" in result && result.error) {
+      setError(result.error);
+    }
     setStudents((result.students ?? []) as StudentGrade[]);
   }
 
@@ -64,15 +81,52 @@ export function GradesForm({
     final: string,
   ) {
     setLoading(true);
-    await saveGrade(
+    setError(null);
+    setNotice(null);
+    const result = await saveGrade(
       studentId,
       classId,
       assignment ? Number(assignment) : null,
       midterm ? Number(midterm) : null,
       final ? Number(final) : null,
     );
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
     await loadStudents(classId);
     setLoading(false);
+  }
+
+  async function handlePublish() {
+    if (!window.confirm("Publikasikan nilai kelas ini? Mahasiswa akan bisa melihat nilainya.")) return;
+    setActionLoading("publish");
+    setError(null);
+    setNotice(null);
+    const result = await publishGrades(classId);
+    setActionLoading(null);
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+    setNotice("Nilai berhasil dipublikasikan.");
+    await loadStudents(classId);
+  }
+
+  async function handleLock() {
+    if (!window.confirm("Kunci nilai kelas ini? Nilai tidak dapat diubah lagi setelah dikunci.")) return;
+    setActionLoading("lock");
+    setError(null);
+    setNotice(null);
+    const result = await lockGrades(classId);
+    setActionLoading(null);
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+    setNotice("Nilai berhasil dikunci.");
+    await loadStudents(classId);
   }
 
   return (
@@ -94,23 +148,31 @@ export function GradesForm({
       </Select>
 
       {classId && (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={loading}
-            onClick={() => publishGrades(classId)}
-          >
-            Publikasikan Nilai
-          </Button>
-          {isAdmin && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <StatusStepper steps={GRADE_STEPS} currentIndex={stepIndex} />
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant="destructive"
-              disabled={loading}
-              onClick={() => lockGrades(classId)}
+              variant="outline"
+              disabled={actionLoading !== null || isPublished}
+              onClick={handlePublish}
             >
-              Kunci Nilai
+              {actionLoading === "publish" ? "Memublikasikan..." : "Publikasikan Nilai"}
             </Button>
-          )}
+            {isAdmin && (
+              <Button
+                variant="destructive"
+                disabled={actionLoading !== null || isLocked}
+                onClick={handleLock}
+              >
+                {actionLoading === "lock" ? "Mengunci..." : "Kunci Nilai"}
+              </Button>
+            )}
+            {isLocked && (
+              <Badge variant="secondary">Nilai terkunci, tidak dapat diubah</Badge>
+            )}
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {notice && <p className="text-sm text-emerald-600">{notice}</p>}
         </div>
       )}
 
@@ -119,6 +181,7 @@ export function GradesForm({
           key={s.student_id}
           student={s}
           loading={loading}
+          locked={isLocked}
           onSave={handleSave}
         />
       ))}
@@ -129,10 +192,12 @@ export function GradesForm({
 function GradeRow({
   student,
   loading,
+  locked,
   onSave,
 }: {
   student: StudentGrade;
   loading: boolean;
+  locked: boolean;
   onSave: (
     studentId: string,
     a: string,
@@ -166,6 +231,7 @@ function GradeRow({
             min={0}
             max={100}
             value={assignment}
+            disabled={locked}
             onChange={(e) => setAssignment(e.target.value)}
             className="w-20"
           />
@@ -177,6 +243,7 @@ function GradeRow({
             min={0}
             max={100}
             value={midterm}
+            disabled={locked}
             onChange={(e) => setMidterm(e.target.value)}
             className="w-20"
           />
@@ -188,18 +255,19 @@ function GradeRow({
             min={0}
             max={100}
             value={final}
+            disabled={locked}
             onChange={(e) => setFinal(e.target.value)}
             className="w-20"
           />
         </div>
         <Button
           size="sm"
-          disabled={loading}
+          disabled={loading || locked}
           onClick={() =>
             onSave(student.student_id, assignment, midterm, final)
           }
         >
-          Simpan
+          {loading ? "..." : "Simpan"}
         </Button>
       </CardContent>
     </Card>

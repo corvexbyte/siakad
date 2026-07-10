@@ -13,6 +13,8 @@ import {
   Scroll,
   Award,
   BriefcaseBusiness,
+  HeartHandshake,
+  FileSignature,
   UserCog,
 } from "lucide-react";
 
@@ -79,8 +81,20 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ["super_admin", "admin_akademik", "mahasiswa"],
   },
   {
-    title: "KKN/TA/KP",
-    href: "/dashboard/programs",
+    title: "KKN",
+    href: "/dashboard/kkn",
+    icon: HeartHandshake,
+    roles: ["super_admin", "admin_akademik", "kaprodi", "dosen", "mahasiswa"],
+  },
+  {
+    title: "Tugas Akhir",
+    href: "/dashboard/ta",
+    icon: FileSignature,
+    roles: ["super_admin", "admin_akademik", "kaprodi", "dosen", "mahasiswa"],
+  },
+  {
+    title: "Kerja Praktek",
+    href: "/dashboard/kp",
     icon: BriefcaseBusiness,
     roles: ["super_admin", "admin_akademik", "kaprodi", "dosen", "mahasiswa"],
   },

@@ -8,12 +8,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusStepper } from "@/components/status-stepper";
 import { KRS_STATUS_LABELS, DAY_LABELS } from "@/types/academic";
 import type { KrsStatus, DayOfWeek } from "@/types/academic";
 import type { CourseRegistration } from "@/types/database";
 import { formatTime } from "@/lib/utils";
 import { sumCredits } from "@/lib/validators/sks-limit";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+const KRS_STEPS = ["Draft", "Diajukan", "Disetujui"];
+const KRS_STEP_INDEX: Record<KrsStatus, number> = {
+  draft: 0,
+  submitted: 1,
+  approved: 2,
+  rejected: 1,
+};
 
 interface KrsItem {
   id: string;
@@ -52,6 +62,7 @@ export function KrsStudentView({
   items: KrsItem[];
   availableClasses: AvailableClass[];
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isDraft = registration.status === "draft";
@@ -64,25 +75,52 @@ export function KrsStudentView({
     setLoading(classId);
     setError(null);
     const result = await addKrsItem(registration.id, classId);
-    if (result?.error) setError(result.error);
-    else window.location.reload();
+    if (result?.error) {
+      setError(result.error);
+      setLoading(null);
+      return;
+    }
+    router.refresh();
     setLoading(null);
   }
 
-  async function handleRemove(itemId: string) {
+  async function handleRemove(itemId: string, label: string) {
+    if (!window.confirm(`Hapus "${label}" dari KRS?`)) return;
     setLoading(itemId);
-    await removeKrsItem(itemId);
-    window.location.reload();
+    setError(null);
+    const result = await removeKrsItem(itemId);
+    if (result?.error) {
+      setError(result.error);
+      setLoading(null);
+      return;
+    }
+    router.refresh();
+    setLoading(null);
   }
 
   async function handleSubmit() {
+    if (!window.confirm("Ajukan KRS ini untuk divalidasi dosen wali?")) return;
     setLoading("submit");
-    await submitKrs(registration.id);
-    window.location.reload();
+    setError(null);
+    const result = await submitKrs(registration.id);
+    if (result?.error) {
+      setError(result.error);
+      setLoading(null);
+      return;
+    }
+    router.refresh();
+    setLoading(null);
   }
 
   return (
     <div className="space-y-6">
+      <StatusStepper
+        steps={KRS_STEPS}
+        currentIndex={KRS_STEP_INDEX[registration.status as KrsStatus]}
+        failed={registration.status === "rejected"}
+        failedLabel="KRS ditolak"
+      />
+
       <div className="flex items-center gap-3">
         <Badge
           variant={
@@ -101,6 +139,12 @@ export function KrsStudentView({
           Total SKS: {totalSks} / 24
         </span>
       </div>
+
+      {registration.rejection_reason && (
+        <p className="rounded-md bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          Alasan penolakan: {registration.rejection_reason}
+        </p>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -135,16 +179,21 @@ export function KrsStudentView({
                   variant="outline"
                   size="sm"
                   disabled={loading === item.id}
-                  onClick={() => handleRemove(item.id)}
+                  onClick={() =>
+                    handleRemove(
+                      item.id,
+                      `${item.classes?.courses?.course_code} — ${item.classes?.courses?.course_name}`,
+                    )
+                  }
                 >
-                  Hapus
+                  {loading === item.id ? "..." : "Hapus"}
                 </Button>
               )}
             </div>
           ))}
           {isDraft && items.length > 0 && (
             <Button onClick={handleSubmit} disabled={loading === "submit"}>
-              Ajukan KRS
+              {loading === "submit" ? "Mengajukan..." : "Ajukan KRS"}
             </Button>
           )}
         </CardContent>

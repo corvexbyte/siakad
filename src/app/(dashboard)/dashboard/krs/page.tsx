@@ -58,7 +58,9 @@ export default async function KrsPage() {
   await requireRole(["super_admin", "admin_akademik"]);
   const { data: registrations } = await supabase
     .from("course_registrations")
-    .select("*, students(student_number, users(full_name)), semesters(name)")
+    .select(
+      "*, students(student_number, users(full_name)), semesters(name), course_registration_items(id, classes(courses(course_code, course_name, credits)))",
+    )
     .order("created_at", { ascending: false });
 
   return (

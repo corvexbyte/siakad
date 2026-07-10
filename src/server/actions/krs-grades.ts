@@ -274,6 +274,16 @@ export async function saveGrade(
     }
   }
 
+  const { data: existing } = await supabase
+    .from("grades")
+    .select("is_locked")
+    .eq("student_id", studentId)
+    .eq("class_id", classId)
+    .maybeSingle();
+  if (existing?.is_locked) {
+    return { error: "Nilai sudah dikunci dan tidak dapat diubah" };
+  }
+
   const calculated = calculateGrade(assignment, midterm, final);
 
   const { error } = await supabase.from("grades").upsert(
@@ -374,6 +384,7 @@ export async function getClassGrades(classId: string) {
           final_numeric_score: null,
           final_letter_grade: null,
           is_published: false,
+          is_locked: false,
           students: student,
         }
       );

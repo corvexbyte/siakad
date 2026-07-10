@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logActivity, requireRole } from "@/server/queries/auth";
-import type { DayOfWeek } from "@/types/database";
+import type { ClassStatus, DayOfWeek } from "@/types/database";
 
 async function guardAdmin() {
   return requireRole(["super_admin", "admin_akademik"]);
@@ -60,6 +60,32 @@ export async function createStudyProgram(formData: FormData) {
   return { success: true };
 }
 
+export async function updateStudyProgram(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("study_programs")
+    .update({
+      faculty_id: formData.get("faculty_id") as string,
+      code: formData.get("code") as string,
+      name: formData.get("name") as string,
+      degree_level: (formData.get("degree_level") as string) || "S1",
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/study-programs");
+  return { success: true };
+}
+
+export async function deleteStudyProgram(id: string) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("study_programs").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/study-programs");
+  return { success: true };
+}
+
 export async function createAcademicYear(formData: FormData) {
   await guardAdmin();
   const supabase = await createClient();
@@ -74,6 +100,28 @@ export async function createAcademicYear(formData: FormData) {
     year_label: formData.get("year_label") as string,
     is_active: isActive,
   });
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/settings");
+  return { success: true };
+}
+
+export async function updateAcademicYear(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const isActive = formData.get("is_active") === "on";
+  if (isActive) {
+    await supabase
+      .from("academic_years")
+      .update({ is_active: false })
+      .neq("id", id);
+  }
+  const { error } = await supabase
+    .from("academic_years")
+    .update({
+      year_label: formData.get("year_label") as string,
+      is_active: isActive,
+    })
+    .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/dashboard/settings");
   return { success: true };
@@ -100,6 +148,30 @@ export async function createSemester(formData: FormData) {
   return { success: true };
 }
 
+export async function updateSemester(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const isActive = formData.get("is_active") === "on";
+  if (isActive) {
+    await supabase
+      .from("semesters")
+      .update({ is_active: false })
+      .neq("id", id);
+  }
+  const { error } = await supabase
+    .from("semesters")
+    .update({
+      academic_year_id: formData.get("academic_year_id") as string,
+      name: formData.get("name") as string,
+      semester_number: Number(formData.get("semester_number")),
+      is_active: isActive,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/settings");
+  return { success: true };
+}
+
 export async function createRoom(formData: FormData) {
   await guardAdmin();
   const supabase = await createClient();
@@ -109,6 +181,32 @@ export async function createRoom(formData: FormData) {
     capacity: Number(formData.get("capacity") || 40),
     building: (formData.get("building") as string) || null,
   });
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/settings");
+  return { success: true };
+}
+
+export async function updateRoom(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("rooms")
+    .update({
+      code: formData.get("code") as string,
+      name: formData.get("name") as string,
+      capacity: Number(formData.get("capacity") || 40),
+      building: (formData.get("building") as string) || null,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/settings");
+  return { success: true };
+}
+
+export async function deleteRoom(id: string) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("rooms").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/dashboard/settings");
   return { success: true };
@@ -199,6 +297,31 @@ export async function createLecturer(formData: FormData) {
   return { success: true };
 }
 
+export async function updateLecturer(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("lecturers")
+    .update({
+      lecturer_number: formData.get("lecturer_number") as string,
+      study_program_id: (formData.get("study_program_id") as string) || null,
+      expertise: (formData.get("expertise") as string) || null,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/lecturers");
+  return { success: true };
+}
+
+export async function deleteLecturer(id: string) {
+  await requireRole(["super_admin"]);
+  const supabase = await createClient();
+  const { error } = await supabase.from("lecturers").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/lecturers");
+  return { success: true };
+}
+
 export async function createClass(formData: FormData) {
   await guardAdmin();
   const supabase = await createClient();
@@ -211,6 +334,23 @@ export async function createClass(formData: FormData) {
     capacity: Number(formData.get("capacity") || 40),
     status: "open",
   });
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/classes");
+  return { success: true };
+}
+
+export async function updateClass(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("classes")
+    .update({
+      lecturer_id: formData.get("lecturer_id") as string,
+      class_name: formData.get("class_name") as string,
+      capacity: Number(formData.get("capacity") || 40),
+      status: formData.get("status") as ClassStatus,
+    })
+    .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/dashboard/classes");
   return { success: true };
@@ -247,6 +387,55 @@ export async function createClassSchedule(formData: FormData) {
     start_time: startTime,
     end_time: endTime,
   });
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/schedules");
+  return { success: true };
+}
+
+export async function updateClassSchedule(id: string, formData: FormData) {
+  await guardAdmin();
+  const supabase = await createClient();
+
+  const classId = formData.get("class_id") as string;
+  const roomId = formData.get("room_id") as string;
+  const dayOfWeek = formData.get("day_of_week") as DayOfWeek;
+  const startTime = formData.get("start_time") as string;
+  const endTime = formData.get("end_time") as string;
+
+  const { data: existing } = await supabase
+    .from("class_schedules")
+    .select("*")
+    .eq("room_id", roomId)
+    .eq("day_of_week", dayOfWeek)
+    .neq("id", id);
+
+  if (existing?.length) {
+    for (const s of existing) {
+      if (s.start_time < endTime && startTime < s.end_time) {
+        return { error: "Bentrok jadwal ruangan" };
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("class_schedules")
+    .update({
+      class_id: classId,
+      room_id: roomId,
+      day_of_week: dayOfWeek,
+      start_time: startTime,
+      end_time: endTime,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/schedules");
+  return { success: true };
+}
+
+export async function deleteClassSchedule(id: string) {
+  await guardAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("class_schedules").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/dashboard/schedules");
   return { success: true };

@@ -15,7 +15,9 @@ import {
   BookOpen,
   BriefcaseBusiness,
   ClipboardList,
+  FileSignature,
   GraduationCap,
+  HeartHandshake,
   Users,
 } from "lucide-react";
 import { DashboardChart } from "@/components/dashboard/dashboard-chart";
@@ -126,10 +128,22 @@ async function getStats(
         href: "/dashboard/classes",
       },
       {
-        label: "KKN/TA/KP",
+        label: "KKN",
+        value: "Buka",
+        icon: HeartHandshake,
+        href: "/dashboard/kkn",
+      },
+      {
+        label: "Tugas Akhir",
+        value: "Buka",
+        icon: FileSignature,
+        href: "/dashboard/ta",
+      },
+      {
+        label: "Kerja Praktek",
         value: "Buka",
         icon: BriefcaseBusiness,
-        href: "/dashboard/programs",
+        href: "/dashboard/kp",
       },
     ];
 
@@ -215,10 +229,22 @@ async function getStats(
         href: "/dashboard/grades",
       },
       {
-        label: "KKN/TA/KP",
+        label: "KKN",
+        value: "Buka",
+        icon: HeartHandshake,
+        href: "/dashboard/kkn",
+      },
+      {
+        label: "Tugas Akhir",
+        value: "Buka",
+        icon: FileSignature,
+        href: "/dashboard/ta",
+      },
+      {
+        label: "Kerja Praktek",
         value: "Buka",
         icon: BriefcaseBusiness,
-        href: "/dashboard/programs",
+        href: "/dashboard/kp",
       },
     ];
   }
@@ -237,10 +263,22 @@ async function getStats(
       href: "/dashboard/khs",
     },
     {
-      label: "KKN/TA/KP",
+      label: "KKN",
+      value: "Buka",
+      icon: HeartHandshake,
+      href: "/dashboard/kkn",
+    },
+    {
+      label: "Tugas Akhir",
+      value: "Buka",
+      icon: FileSignature,
+      href: "/dashboard/ta",
+    },
+    {
+      label: "Kerja Praktek",
       value: "Buka",
       icon: BriefcaseBusiness,
-      href: "/dashboard/programs",
+      href: "/dashboard/kp",
     },
   ];
 }
@@ -253,29 +291,39 @@ function getQuickLinks(role: UserRole) {
         { title: "Dosen", desc: "Kelola data dosen", href: "/dashboard/lecturers" },
         { title: "Fakultas", desc: "Data fakultas", href: "/dashboard/faculties" },
         { title: "Pengaturan", desc: "Tahun akademik & semester", href: "/dashboard/settings" },
-        { title: "KKN/TA/KP", desc: "Kelola program akademik", href: "/dashboard/programs" },
+        { title: "KKN", desc: "Kelola program KKN", href: "/dashboard/kkn" },
+        { title: "Tugas Akhir", desc: "Kelola program tugas akhir", href: "/dashboard/ta" },
+        { title: "Kerja Praktek", desc: "Kelola program kerja praktek", href: "/dashboard/kp" },
       ],
       admin_akademik: [
         { title: "Mahasiswa", desc: "Kelola data mahasiswa", href: "/dashboard/students" },
         { title: "Jadwal", desc: "Atur jadwal kuliah", href: "/dashboard/schedules" },
         { title: "KRS", desc: "Validasi KRS", href: "/dashboard/krs" },
-        { title: "KKN/TA/KP", desc: "Periode dan pendaftaran", href: "/dashboard/programs" },
+        { title: "KKN", desc: "Periode dan pendaftaran KKN", href: "/dashboard/kkn" },
+        { title: "Tugas Akhir", desc: "Periode dan pendaftaran TA", href: "/dashboard/ta" },
+        { title: "Kerja Praktek", desc: "Periode dan pendaftaran KP", href: "/dashboard/kp" },
       ],
       kaprodi: [
         { title: "Mahasiswa", desc: "Data mahasiswa prodi", href: "/dashboard/students" },
         { title: "Dosen", desc: "Data dosen prodi", href: "/dashboard/lecturers" },
         { title: "Kelas", desc: "Daftar kelas", href: "/dashboard/classes" },
-        { title: "KKN/TA/KP", desc: "Pembimbing dan nilai akhir", href: "/dashboard/programs" },
+        { title: "KKN", desc: "Pembimbing dan nilai akhir KKN", href: "/dashboard/kkn" },
+        { title: "Tugas Akhir", desc: "Pembimbing dan nilai akhir TA", href: "/dashboard/ta" },
+        { title: "Kerja Praktek", desc: "Pembimbing dan nilai akhir KP", href: "/dashboard/kp" },
       ],
       dosen: [
         { title: "Input Nilai", desc: "Nilai mahasiswa", href: "/dashboard/grades" },
         { title: "Validasi KRS", desc: "Mahasiswa bimbingan", href: "/dashboard/advisor/krs" },
-        { title: "KKN/TA/KP", desc: "Logbook dan penilaian", href: "/dashboard/programs" },
+        { title: "KKN", desc: "Logbook dan penilaian KKN", href: "/dashboard/kkn" },
+        { title: "Tugas Akhir", desc: "Logbook dan penilaian TA", href: "/dashboard/ta" },
+        { title: "Kerja Praktek", desc: "Logbook dan penilaian KP", href: "/dashboard/kp" },
       ],
       mahasiswa: [
         { title: "KRS", desc: "Isi KRS semester ini", href: "/dashboard/krs" },
         { title: "KHS", desc: "Kartu Hasil Studi", href: "/dashboard/khs" },
-        { title: "KKN/TA/KP", desc: "Pendaftaran dan logbook", href: "/dashboard/programs" },
+        { title: "KKN", desc: "Pendaftaran dan logbook KKN", href: "/dashboard/kkn" },
+        { title: "Tugas Akhir", desc: "Pendaftaran dan logbook TA", href: "/dashboard/ta" },
+        { title: "Kerja Praktek", desc: "Pendaftaran dan logbook KP", href: "/dashboard/kp" },
       ],
     };
   return links[role] ?? [];

@@ -1,8 +1,7 @@
 import { requireRole } from "@/server/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
-import { DataTable } from "@/components/tables/data-table";
-import { ScheduleForm } from "@/features/schedules/schedule-form";
+import { ScheduleManager } from "@/features/schedules/schedule-manager";
 import { DAY_LABELS } from "@/types/academic";
 import type { DayOfWeek } from "@/types/academic";
 import { formatTime } from "@/lib/utils";
@@ -36,16 +35,7 @@ export default async function SchedulesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Jadwal Kuliah" description="Atur jadwal dan ruangan" />
-      <ScheduleForm classes={classes ?? []} rooms={rooms ?? []} />
-      <DataTable
-        columns={[
-          { key: "class_label", label: "Kelas" },
-          { key: "day_label", label: "Hari" },
-          { key: "time_range", label: "Waktu" },
-          { key: "room_name", label: "Ruangan" },
-        ]}
-        data={rows}
-      />
+      <ScheduleManager schedules={rows} classes={classes ?? []} rooms={rooms ?? []} />
     </div>
   );
 }
