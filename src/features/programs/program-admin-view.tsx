@@ -16,7 +16,10 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/tables/data-table";
+import { Pagination } from "@/components/tables/pagination";
 import { RegistrationStepper } from "./status-stepper";
+
+const REG_PAGE_SIZE = 10;
 import {
   DocumentLinks,
   EmptyState,
@@ -68,6 +71,13 @@ export function ProgramAdminView({
   rubrics: AcademicProgramRubric[];
 }) {
   const pendingCount = registrations.filter((r) => r.status === "pending").length;
+  const [regPage, setRegPage] = useState(1);
+  const regTotalPages = Math.max(1, Math.ceil(registrations.length / REG_PAGE_SIZE));
+  const regCurrentPage = Math.min(regPage, regTotalPages);
+  const pageRegistrations = registrations.slice(
+    (regCurrentPage - 1) * REG_PAGE_SIZE,
+    regCurrentPage * REG_PAGE_SIZE,
+  );
 
   return (
     <div className="space-y-6">
@@ -107,7 +117,7 @@ export function ProgramAdminView({
           {registrations.length === 0 && (
             <EmptyState text="Belum ada pendaftaran masuk." />
           )}
-          {registrations.map((registration) => (
+          {pageRegistrations.map((registration) => (
             <RegistrationAdminCard
               key={registration.id}
               registration={registration}
@@ -117,6 +127,13 @@ export function ProgramAdminView({
               )}
             />
           ))}
+          <Pagination
+            page={regCurrentPage}
+            totalPages={regTotalPages}
+            totalItems={registrations.length}
+            pageSize={REG_PAGE_SIZE}
+            onPageChange={setRegPage}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -12,6 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/page-header";
 import { RegistrationStepper } from "./status-stepper";
+import { Pagination } from "@/components/tables/pagination";
+
+const PAGE_SIZE = 10;
 import {
   DocumentLinks,
   EmptyState,
@@ -41,6 +44,14 @@ export function ProgramLecturerView({
   >;
   rubrics: AcademicProgramRubric[];
 }) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(assignments.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageAssignments = assignments.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -50,7 +61,7 @@ export function ProgramLecturerView({
       {assignments.length === 0 && (
         <EmptyState text={`Belum ada mahasiswa ${typeLabel} yang ditugaskan ke Anda.`} />
       )}
-      {assignments.map((assignment) => {
+      {pageAssignments.map((assignment) => {
         const registration = assignment.academic_program_registrations;
         const registrationRubrics = rubrics.filter(
           (rubric) =>
@@ -89,6 +100,13 @@ export function ProgramLecturerView({
           </Card>
         );
       })}
+      <Pagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={assignments.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

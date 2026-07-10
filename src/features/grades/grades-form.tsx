@@ -19,6 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusStepper } from "@/components/status-stepper";
+import { Pagination } from "@/components/tables/pagination";
+
+const PAGE_SIZE = 10;
 
 interface ClassOption {
   id: string;
@@ -58,15 +61,23 @@ export function GradesForm({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const isPublished = students.some((s) => s.is_published);
   const isLocked = students.some((s) => s.is_locked);
   const stepIndex = isLocked ? 2 : isPublished ? 1 : 0;
+  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStudents = students.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   async function loadStudents(selectedClassId: string) {
     setClassId(selectedClassId);
     setError(null);
     setNotice(null);
+    setPage(1);
     const result = await getClassGrades(selectedClassId);
     if ("error" in result && result.error) {
       setError(result.error);
@@ -176,7 +187,7 @@ export function GradesForm({
         </div>
       )}
 
-      {students.map((s) => (
+      {pageStudents.map((s) => (
         <GradeRow
           key={s.student_id}
           student={s}
@@ -185,6 +196,13 @@ export function GradesForm({
           onSave={handleSave}
         />
       ))}
+      <Pagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={students.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

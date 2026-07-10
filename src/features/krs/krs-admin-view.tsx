@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusStepper } from "@/components/status-stepper";
+import { Pagination } from "@/components/tables/pagination";
 import { KRS_STATUS_LABELS } from "@/types/academic";
 import type { KrsStatus } from "@/types/academic";
 
+const PAGE_SIZE = 10;
 const KRS_STEPS = ["Draft", "Diajukan", "Disetujui"];
 const KRS_STEP_INDEX: Record<KrsStatus, number> = {
   draft: 0,
@@ -47,6 +49,7 @@ export function KrsAdminView({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
 
   async function handleApprove(registration: RegistrationRow) {
     const label = registration.students?.users?.full_name ?? "mahasiswa ini";
@@ -89,10 +92,17 @@ export function KrsAdminView({
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(registrations.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRegistrations = registrations.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {registrations.map((registration) => {
+      {pageRegistrations.map((registration) => {
         const items = registration.course_registration_items ?? [];
         const totalSks = items.reduce(
           (sum, item) => sum + (item.classes?.courses?.credits ?? 0),
@@ -189,6 +199,13 @@ export function KrsAdminView({
           </Card>
         );
       })}
+      <Pagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={registrations.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

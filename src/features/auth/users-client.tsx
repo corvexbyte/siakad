@@ -17,6 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { ROLE_LABELS, ROLES } from "@/constants/roles";
 import type { UserRole } from "@/constants/roles";
 import { Plus, UserCheck, UserX } from "lucide-react";
+import { Pagination } from "@/components/tables/pagination";
+
+const PAGE_SIZE = 10;
 
 type UserRow = {
   id: string;
@@ -36,6 +39,7 @@ export function UsersClient({ users }: UsersClientProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [page, setPage] = useState(1);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,6 +75,13 @@ export function UsersClient({ users }: UsersClientProps) {
     acc[label] = (acc[label] ?? 0) + 1;
     return acc;
   }, {});
+
+  const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageUsers = users.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   return (
     <div className="space-y-6">
@@ -159,7 +170,8 @@ export function UsersClient({ users }: UsersClientProps) {
       )}
 
       {/* Users Table */}
-      <div className="overflow-x-auto rounded-lg border bg-card shadow">
+      <div className="overflow-hidden rounded-lg border bg-card shadow">
+       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-slate-100">
@@ -182,7 +194,7 @@ export function UsersClient({ users }: UsersClientProps) {
                 </td>
               </tr>
             )}
-            {users.map((user) => (
+            {pageUsers.map((user) => (
               <tr
                 key={user.id}
                 className="border-b last:border-0 transition-colors hover:bg-accent/40"
@@ -246,6 +258,14 @@ export function UsersClient({ users }: UsersClientProps) {
             ))}
           </tbody>
         </table>
+       </div>
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          totalItems={users.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
